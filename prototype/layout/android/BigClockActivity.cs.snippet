@@ -1,0 +1,101 @@
+// Throwaway snippet — logic for ticker + colon blink (see #6 for full spec)
+// Target: .NET for Android, net10.0-android, BigClockActivity
+// Demonstrates scaling choice + blink alignment to second boundary.
+
+using Android.App;
+using Android.OS;
+using Android.Widget;
+using AndroidX.Core.View;
+using System;
+
+[Activity(Label = "Big Clock",
+          ScreenOrientation = Android.Content.PM.ScreenOrientation.SensorLandscape,
+          ConfigurationChanges = Android.Content.PM.ConfigChanges.Orientation | Android.Content.PM.ConfigChanges.ScreenSize,
+          Theme = "@android:style/Theme.Black.NoTitleBar.Fullscreen")]
+public sealed class BigClockActivity : Activity
+{
+    TextView? clockText; // Variant A: single TextView
+    // TextView? hhText, colonText, mmText; // Variant B: triptych
+
+    Handler handler = new Handler(Looper.MainLooper!);
+    bool colonVisible = true;
+    Java.Lang.Runnable? colonRunnable;
+    Java.Lang.Runnable? minuteRunnable;
+
+    protected override void OnCreate(Bundle? savedInstanceState)
+    {
+        base.OnCreate(savedInstanceState);
+
+        // Immersive: hide status/nav — detail in #5
+        WindowCompat.SetDecorFitsSystemWindows(Window!, false);
+        var controller = WindowCompat.GetInsetsController(Window!, Window!.DecorView);
+        controller?.Hide(WindowInsetsCompat.Type.SystemBars());
+        controller?.SystemBarsBehavior = WindowInsetsControllerCompat.BehaviorShowTransientBarsBySwipe;
+
+        SetContentView(Resource.Layout.activity_big_clock_single); // or triptych
+        clockText = FindViewById<TextView>(Resource.Id.clockText);
+
+        // Cutout safe inset: apply padding from DisplayCutout (landscape left/right)
+        // Window.DecorView.RootWindowInsets?.DisplayCutout?.SafeInsetLeft / Right
+
+        StartTicker();
+    }
+
+    void StartTicker()
+    {
+        UpdateClock(); // immediate HH:MM
+        // Align first colon toggle to next second boundary
+        long now = SystemClock.UptimeMillis();
+        long delayToNextSec = 1000 - (now % 1000);
+        colonVisible = (now % 1000) < 500;
+        ApplyColon();
+
+        handler.PostDelayed(() =>
+        {
+            colonVisible = true; ApplyColon();
+            // Every 500ms toggle
+            colonRunnable = new Java.Lang.Runnable(() => { colonVisible = !colonVisible; ApplyColon(); handler.PostDelayed(colonRunnable!, 500); });
+            handler.PostDelayed(colonRunnable!, 500);
+
+            // Update HH:MM every minute at :00.000 — align to next minute
+            ScheduleMinuteTick();
+        }, delayToNextSec);
+    }
+
+    void ScheduleMinuteTick()
+    {
+        long nowMs = Java.Lang.JavaSystem.CurrentTimeMillis();
+        long msToNextMinute = 60000 - (nowMs % 60000);
+        minuteRunnable = new Java.Lang.Runnable(() => { UpdateClock(); ScheduleMinuteTick(); });
+        handler.PostDelayed(minuteRunnable!, msToNextMinute);
+    }
+
+    void UpdateClock()
+    {
+        var now = DateTime.Now; // or TimeZone-aware
+        string hh = now.Hour.ToString("D2");
+        string mm = now.Minute.ToString("D2");
+        // Variant A: Spannable with alpha for colon
+        // clockText.Text = $"{hh}:{mm}";
+        // Variant B: hhText.Text=hh; mmText.Text=mm;
+        if (clockText != null) clockText.Text = $"{hh}:{mm}";
+    }
+
+    void ApplyColon()
+    {
+        // Variant A — Spannable alpha 0..1 for ':' at index 2
+        // var s = new SpannableString(clockText.Text);
+        // s.SetSpan(new ForegroundColorSpan(colonVisible ? Color.White : Color.Transparent), 2, 3, SpanTypes.ExclusiveExclusive);
+        // Variant B — colonText.Alpha = colonVisible ? 1f : 0f;
+        if (clockText == null) return;
+        var text = clockText.Text;
+        if (string.IsNullOrEmpty(text) || text.Length < 5) return;
+        var span = new Android.Text.SpannableString(text);
+        int color = colonVisible ? Android.Graphics.Color.White : Android.Graphics.Color.Transparent;
+        span.SetSpan(new Android.Text.Style.ForegroundColorSpan(color), 2, 3, Android.Text.SpanTypes.ExclusiveExclusive);
+        clockText.SetText(span, TextView.BufferType.Spannable);
+    }
+
+    protected override void OnPause() { base.OnPause(); handler.RemoveCallbacks(colonRunnable); handler.RemoveCallbacks(minuteRunnable); }
+    protected override void OnResume() { base.OnResume(); StartTicker(); }
+}

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Variant B — Triptych (HH : MM как три элемента)
+  Throwaway prototype. Раздельные TextView для HH, ':', MM.
+  ':' — отдельный TextView, мигает через setAlpha / visibility без пересчёта layout.
+  Масштаб синхронизирован: все три TextView используют одинаковый autoSize диапазон.
+  Плюс: можно анимировать ':' независимо (pulse, scale).
+  Минус: сложнее выровнять baseline + синхронизировать autoSize.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:keepScreenOn="true">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:baselineAligned="true"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintWidth_percent="0.94"
+        app:layout_constraintHeight_percent="0.80">
+
+        <TextView
+            android:id="@+id/hhText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="00"
+            android:textColor="#FFFFFF"
+            android:fontFamily="monospace"
+            android:includeFontPadding="false"
+            android:gravity="center"
+            android:textSize="200sp"
+            app:autoSizeTextType="uniform"
+            app:autoSizeMinTextSize="40sp"
+            app:autoSizeMaxTextSize="320sp"
+            app:autoSizeStepGranularity="2sp" />
+
+        <TextView
+            android:id="@+id/colonText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=":"
+            android:textColor="#FFFFFF"
+            android:fontFamily="monospace"
+            android:includeFontPadding="false"
+            android:gravity="center"
+            android:textSize="200sp"
+            android:minWidth="40dp"
+            app:autoSizeTextType="uniform"
+            app:autoSizeMinTextSize="40sp"
+            app:autoSizeMaxTextSize="320sp" />
+
+        <TextView
+            android:id="@+id/mmText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="00"
+            android:textColor="#FFFFFF"
+            android:fontFamily="monospace"
+            android:includeFontPadding="false"
+            android:gravity="center"
+            android:textSize="200sp"
+            app:autoSizeTextType="uniform"
+            app:autoSizeMinTextSize="40sp"
+            app:autoSizeMaxTextSize="320sp"
+            app:autoSizeStepGranularity="2sp" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Big Clock — Prototype layout (throwaway)</title>
+<!--
+  Three variants of HH:MM landscape layout, switchable via ?variant=
+  Question: Какой layout даёт "часы во весь экран" в ландшафте?
+  Variants:
+    A — CenterSingle (один TextView, ':' мигает opacity)
+    B — Triptych (HH | : | MM три элемента, ':' visibility)
+    C — BleedFull (растянутый во всю ширину, safe-inset визуализация)
+  Throwaway — не production, см. prototype skill. Run: double-click this file.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; overflow:hidden; }
+  body { background:#000; color:#fff; font-family:'JetBrains Mono','Roboto Mono',monospace; }
+  /* Variant A — CenterSingle */
+  .variant-a { display:flex; align-items:center; justify-content:center; height:100vh; width:100vw; background:#000; }
+  .variant-a .clock { font-size:28vw; font-weight:700; letter-spacing:0.02em; line-height:1; font-variant-numeric: tabular-nums; }
+  .variant-a .colon { transition: opacity 0.05s linear; }
+  .variant-a .colon.off { opacity:0; }
+  /* Variant B — Triptych cards */
+  .variant-b { display:flex; align-items:center; justify-content:center; height:100vh; width:100vw; background:#000; gap:2vw; }
+  .variant-b .box { background:#111; border-radius:1.5vw; padding:2vw 3vw; font-size:22vw; font-weight:700; line-height:1; letter-spacing:0.02em; font-variant-numeric: tabular-nums; }
+  .variant-b .colon-box { font-size:22vw; font-weight:700; line-height:1; width:8vw; text-align:center; transition: opacity 0.05s; }
+  .variant-b .colon-box.off { opacity:0; }
+  /* Variant C — Bleed + safe-area visualization */
+  .variant-c { display:flex; align-items:center; justify-content:center; height:100vh; width:100vw; background:#000; position:relative; }
+  .variant-c .safe-area { position:absolute; inset:0; border:1px dashed rgba(255,255,255,0.15); margin:2vh 3vw; pointer-events:none; }
+  .variant-c .safe-area::before { content:"safe inset (cutout margin)"; position:absolute; top:-1.2em; left:50%; transform:translateX(-50%); font-size:10px; color:rgba(255,255,255,0.3); font-family:sans-serif; letter-spacing:0.08em; text-transform:uppercase; }
+  .variant-c .notch { position:absolute; top:0; left:50%; transform:translateX(-50%); width:18vw; height:3vh; background:rgba(255,255,255,0.08); border-radius:0 0 1vw 1vw; }
+  .variant-c .notch-label { position:absolute; top:3.5vh; left:50%; transform:translateX(-50%); font-size:9px; color:rgba(255,255,255,0.25); font-family:sans-serif; }
+  .variant-c .clock { font-size:26vw; font-weight:700; letter-spacing:0.04em; line-height:1; font-variant-numeric: tabular-nums; display:flex; align-items:center; }
+  .variant-c .colon-c { transition: opacity 0.05s; display:inline-block; width:6vw; text-align:center; }
+  .variant-c .colon-c.off { opacity:0.08; }
+  /* Debug overlay */
+  .debug { position:fixed; top:10px; left:10px; font-family:sans-serif; font-size:11px; color:rgba(255,255,255,0.55); background:rgba(255,255,255,0.08); padding:6px 8px; border-radius:6px; line-height:1.5; backdrop-filter: blur(6px); }
+  /* Switcher bar */
+  #switcher { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:rgba(30,30,30,0.92); border:1px solid rgba(255,255,255,0.15); border-radius:999px; display:flex; align-items:center; gap:10px; padding:8px 14px; font-family:sans-serif; font-size:13px; color:#fff; box-shadow:0 8px 24px rgba(0,0,0,0.5); z-index:99; }
+  #switcher button { background:rgba(255,255,255,0.12); border:none; color:#fff; width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:14px; }
+  #switcher button:hover { background:rgba(255,255,255,0.22); }
+  #switcher .label { min-width:220px; text-align:center; }
+  #switcher .variant-name { font-weight:700; }
+  #switcher .hint { font-size:10px; color:rgba(255,255,255,0.5); margin-left:6px; }
+  .hidden { display:none !important; }
+  /* Palette toggle (for HITL feedback) */
+  .palette-amber .clock, .palette-amber .box, .palette-amber .colon-box, .palette-amber .colon, .palette-amber .colon-c { color:#FFCC33; }
+  .palette-green .clock, .palette-green .box, .palette-green .colon-box, .palette-green .colon, .palette-green .colon-c { color:#7FFF7F; }
+</style>
+</head>
+<body>
+<!-- Debug info -->
+<div class="debug" id="debug"></div>
+
+<!-- VARIANT A -->
+<div id="va" class="variant-a">
+  <div class="clock"><span id="a-hh">00</span><span id="a-colon" class="colon">:</span><span id="a-mm">00</span></div>
+</div>
+<!-- VARIANT B -->
+<div id="vb" class="variant-b hidden">
+  <div class="box" id="b-hh">00</div>
+  <div class="colon-box" id="b-colon">:</div>
+  <div class="box" id="b-mm">00</div>
+</div>
+<!-- VARIANT C -->
+<div id="vc" class="variant-c hidden">
+  <div class="safe-area"></div>
+  <div class="notch"></div>
+  <div class="notch-label">simulated cutout</div>
+  <div class="clock"><span id="c-hh">00</span><span id="c-colon" class="colon-c">:</span><span id="c-mm">00</span></div>
+</div>
+
+<!-- Floating switcher -->
+<div id="switcher">
+  <button id="prev" aria-label="prev">←</button>
+  <span class="label"><span class="variant-name" id="switcher-label">A — CenterSingle</span><span class="hint">← → to switch</span></span>
+  <button id="next" aria-label="next">→</button>
+  <span style="width:1px;height:18px;background:rgba(255,255,255,0.15);margin:0 4px;"></span>
+  <button id="paletteBtn" title="cycle palette (white/amber/green)" style="width:auto;padding:0 10px;border-radius:999px;font-size:11px;">palette</button>
+</div>
+
+<script>
+const variants = [
+  { key:'A', name:'CenterSingle — один TextView', el:'va', label:'A — CenterSingle' },
+  { key:'B', name:'Triptych — HH : MM как три элемента', el:'vb', label:'B — Triptych' },
+  { key:'C', name:'BleedFull — во всю ширину + safe-inset', el:'vc', label:'C — BleedFull + cutout' },
+];
+function getVariantFromURL(){ const p=new URLSearchParams(location.search); return (p.get('variant')||'A').toUpperCase(); }
+function setVariant(key, push=true){
+  const v = variants.find(x=>x.key===key) || variants[0];
+  variants.forEach(x=> document.getElementById(x.el).classList.toggle('hidden', x.key!==v.key));
+  document.getElementById('switcher-label').textContent = v.label;
+  document.title = `Big Clock — ${v.label}`;
+  if(push){ const url=new URL(location); url.searchParams.set('variant', v.key); history.replaceState(null,'',url); }
+}
+function cycle(dir){ const cur=getVariantFromURL(); const idx=variants.findIndex(x=>x.key===cur); const next=(idx+dir+variants.length)%variants.length; setVariant(variants[next].key); }
+// init
+setVariant(getVariantFromURL(), false);
+document.getElementById('prev').onclick=()=>cycle(-1);
+document.getElementById('next').onclick=()=>cycle(1);
+document.addEventListener('keydown', e=>{
+  if(e.target.matches('input,textarea,[contenteditable]')) return;
+  if(e.key==='ArrowLeft') cycle(-1);
+  if(e.key==='ArrowRight') cycle(1);
+});
+// palette cycle
+const palettes=['','palette-amber','palette-green'];
+let pi=0;
+document.getElementById('paletteBtn').onclick=()=>{
+  document.body.classList.remove(...palettes.filter(Boolean));
+  pi=(pi+1)%palettes.length;
+  if(palettes[pi]) document.body.classList.add(palettes[pi]);
+};
+// Clock + colon blink synced to system second
+let blinkOn=true;
+function updateTime(){
+  const now=new Date();
+  const hh=String(now.getHours()).padStart(2,'0');
+  const mm=String(now.getMinutes()).padStart(2,'0');
+  ['a','b','c'].forEach(p=>{
+    const h=document.getElementById(p+'-hh'); if(h) h.textContent=hh;
+    const m=document.getElementById(p+'-mm'); if(m) m.textContent=mm;
+  });
+}
+function updateDebug(){
+  const w=innerWidth, h=innerHeight, ratio=(w/h).toFixed(2);
+  const dpr=window.devicePixelRatio||1;
+  document.getElementById('debug').innerHTML =
+    `viewport ${w}×${h} &nbsp; ratio ${ratio} &nbsp; DPR ${dpr}<br>`+
+    `variant ?variant=${getVariantFromURL()} &nbsp; monospace tabular-nums<br>`+
+    `blink 500ms synced to second &nbsp; palette: ${palettes[pi]||'white on black'}`;
+}
+updateTime(); updateDebug();
+window.addEventListener('resize', updateDebug);
+// Align first blink to next second boundary, then toggle every 500ms
+function scheduleBlink(){
+  const now=Date.now();
+  const msToNextSec = 1000 - (now % 1000);
+  // colon visible at :00.000, off at :00.500
+  const initialOn = (now % 1000) < 500;
+  blinkOn = initialOn;
+  applyBlink();
+  setTimeout(()=>{
+    // now we're at second boundary
+    blinkOn = true; applyBlink();
+    setInterval(()=>{ blinkOn=!blinkOn; applyBlink(); }, 500);
+    // also update HH:MM at each minute boundary
+    setInterval(updateTime, 1000);
+  }, msToNextSec);
+}
+function applyBlink(){
+  document.getElementById('a-colon').classList.toggle('off', !blinkOn);
+  document.getElementById('b-colon').classList.toggle('off', !blinkOn);
+  document.getElementById('c-colon').classList.toggle('off', !blinkOn);
+}
+scheduleBlink();
+setInterval(updateTime, 1000);
+// auto-size demo: scale font if viewport is very narrow (portrait) — show that landscape assumption matters
+function autoScale(){
+  // For variant A, if width < height, reduce font to avoid overflow (portrait fallback)
+  const w=innerWidth, h=innerHeight;
+  const clockA=document.querySelector('#va .clock');
+  if(clockA){
+    if(w < h) clockA.style.fontSize = '22vw';
+    else clockA.style.fontSize = '';
+  }
+}
+window.addEventListener('resize', autoScale);
+autoScale();
+</script>
+</body>
+</html>

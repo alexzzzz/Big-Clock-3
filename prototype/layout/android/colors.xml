@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hardcoded palette — Out of scope: no user theming per map -->
+<resources>
+    <!-- Background: pure black for OLED + battery -->
+    <color name="clockBackground">#FF000000</color>
+    <!-- Primary digits: white (default) -->
+    <color name="clockDigits">#FFFFFFFF</color>
+    <!-- Alternatives for HITL review (pick one, hardcode): -->
+    <color name="clockDigitsAmber">#FFFFCC33</color>
+    <color name="clockDigitsGreen">#FF7FFF7F</color>
+    <!-- Colon dim state (for Variant C alpha 0.08 variant) -->
+    <color name="clockColonDim">#14FFFFFF</color>
+</resources>

@@ -8,19 +8,11 @@
     <ApplicationId>com.alexzzzz.bigclock</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
-    <!-- SDK границы из ADR-0001 -->
     <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
-    <!-- Для проверки: TargetFramework уже задаёт compileSdk через workload -->
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <!-- R8 / trimming — детали в тумане "Сборка и дистрибуция", пока без включений -->
-    <RunAOTCompilation>false</RunAOTCompilation>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Xamarin.AndroidX.Core" Version="1.15.0.1" />
-    <!-- WindowCompat / WindowInsetsControllerCompat живут в androidx.core -->
   </ItemGroup>
 
 </Project>

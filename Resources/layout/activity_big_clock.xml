@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Скопировано из prototype/layout Вариант A (CenterSingle) — recommended default из #4 -->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -7,7 +6,6 @@
     android:layout_height="match_parent"
     android:background="#000000"
     android:keepScreenOn="true">
-
     <TextView
         android:id="@+id/clockText"
         android:layout_width="0dp"
@@ -30,5 +28,4 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintWidth_percent="0.92"
         app:layout_constraintHeight_percent="0.85" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -2,5 +2,4 @@
 <resources>
   <color name="clockBackground">#FF000000</color>
   <color name="clockDigits">#FFFFFFFF</color>
-  <color name="clockDigitsAmber">#FFFFCC33</color>
 </resources>

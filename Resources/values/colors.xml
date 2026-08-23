@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <color name="clockBackground">#FF000000</color>
+  <color name="clockDigits">#FFFFFFFF</color>
+  <color name="clockDigitsAmber">#FFFFCC33</color>
+</resources>

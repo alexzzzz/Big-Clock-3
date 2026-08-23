@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <!-- Big Clock — только часы, никаких permission не нужно (даже WAKE_LOCK не нужен — keepScreenOn через Window) -->
+  <!-- Если позже нужен будет RECEIVE_BOOT_COMPLETED — добавить отдельно, сейчас out of scope -->
+
+  <application
+      android:allowBackup="false"
+      android:icon="@mipmap/icon"
+      android:label="Big Clock"
+      android:theme="@android:style/Theme.Black.NoTitleBar">
+
+    <activity
+        android:name=".BigClockActivity"
+        android:exported="true"
+        android:launchMode="singleInstance"
+        android:screenOrientation="sensorLandscape"
+        android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|keyboardHidden|keyboard"
+        android:keepScreenOn="false">
+      <!--
+        sensorLandscape vs landscape: sensorLandscape — оба ландшафтных поворота (датчик), landscape — только один.
+        Для часов лучше sensorLandscape: как ни положи планшет — цифры будут горизонтально.
+        configChanges: без пересоздания Activity при повороте/докидывании. Обязателен screenSize|screenLayout|smallestScreenSize|orientation.
+        keepScreenOn="false" в манифесте не ставим — ставим в layout root (android:keepScreenOn="true") + в коде Window.AddFlags.
+        Так флаг живёт пока Activity в foreground и автоматически снимается в onPause (экономия).
+      -->
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+
+  </application>
+
+</manifest>

@@ -18,8 +18,8 @@ public sealed class ClockTicker : Java.Lang.Object
     readonly Handler handler;
     readonly Action<string> log; // опционально для диагностики
 
-    Java.Lang.Runnable? colonRunnable;
-    Java.Lang.Runnable? minuteRunnable;
+    Java.Lang.IRunnable? colonRunnable;
+    Java.Lang.IRunnable? minuteRunnable;
     BroadcastReceiver? timeReceiver;
     bool colonVisible = true;
     bool isRunning;

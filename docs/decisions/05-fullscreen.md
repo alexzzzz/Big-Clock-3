@@ -1,7 +1,9 @@
 # Решение #5 — Полноэкранный режим, keepScreenOn, ландшафт, скрытие панелей
 
+> **Примечание 2026-08-24:** Актуальная сборка — `net11.0-android`, `Sdk="Microsoft.NET.Sdk"` (ADR-0001 актуализирован), safe-padding теперь `0` для максимального заполнения — см. `07-font-colon-maximize.md`. Ниже — исходное решение, сохранённое для истории.
+
 ## Вопрос (из Wayfinder)
-Как реализовать принудительный ландшафт, полноэкранный immersive-режим, `keepScreenOn` и обработку `configChanges` без пересоздания Activity под стек .NET for Android (ADR-0001, `net10.0-android`, minSdk 26)?
+Как реализовать принудительный ландшафт, полноэкранный immersive-режим, `keepScreenOn` и обработку `configChanges` без пересоздания Activity под стек .NET for Android (ADR-0001, `net11.0-android`, minSdk 26)?
 
 ## Ответ — конкретные флаги и вызовы + скелет
 
@@ -46,14 +48,10 @@
 - `WindowInsetsController` — только с API 30, а у нас minSdk 26.
 - `WindowInsetsControllerCompat` из `Xamarin.AndroidX.Core:1.15.0.1` покрывает весь диапазон и один код-путь.
 
-### 4) Вырезы и отступы `BigClockActivity.cs:83-98`
+### 4) Вырезы и отступы `BigClockActivity.cs:83-98` (эволюция)
 
-```csharp
-ViewCompat.SetOnApplyWindowInsetsListener(root, new InsetsListener());
- // left = max(SystemBars.Left, DisplayCutout.Left) и т.д.
-```
+Исходно — `left = max(SystemBars.Left, DisplayCutout.Left)` и `SetPadding(left,top,right,bottom)` — страховка от notch при `0.92/0.85`. Актуально для максимального заполнения (`07`) — `InsetsListener` устанавливает `SetPadding(0,0,0,0)` и `Consumed`, при `ShortEdges` и скрытых барах цифры используют `1.0×1.0` без полей.
 
-- Суммируем `SystemBars` + `DisplayCutout` — часы не уедут под notch. Layout уже центрирован (`constraintWidth_percent 0.92`), добавочный padding — страховка на узких вырезах.
 - Альтернатива — `android:fitsSystemWindows` — отвергнута: она обрезает edge-to-edge.
 
 ### 5) `onPause` / `onResume`
@@ -65,15 +63,15 @@ ViewCompat.SetOnApplyWindowInsetsListener(root, new InsetsListener());
 
 `@android:style/Theme.Black.NoTitleBar` в манифесте + `android:background="#000000"` в layout — чёрный фон (OLED, батарея). `Theme.Material` не нужен.
 
-## Скелет проекта (эта ветка)
+## Скелет проекта
 
 ```
-BigClock.csproj              — net10.0-android, SupportedOSPlatformVersion 26
+BigClock.csproj              — net11.0-android, SupportedOSPlatformVersion 26 (Microsoft.NET.Sdk)
 Properties/AndroidManifest.xml — см. выше
-BigClockActivity.cs          — см. выше (полный immersive + keepScreenOn + cutout)
-Resources/layout/activity_big_clock.xml — из #4 Variant A
+BigClockActivity.cs          — immersive + keepScreenOn + ShortEdges, Insets 0 (07)
+Resources/layout/activity_big_clock.xml — 1.0×1.0, digital_7_mono, overlay (07)
 Resources/values/colors.xml, strings.xml
-docs/decisions/05-fullscreen.md — этот файл
+docs/decisions/05-fullscreen.md — этот файл (актуализировано в 07)
 ```
 
 Сборка: `dotnet workload install android` (один раз) → `dotnet build -c Release` → `dotnet build -c Release -t:SignAndroidPackage` (подпись — туман "Сборка и дистрибуция").

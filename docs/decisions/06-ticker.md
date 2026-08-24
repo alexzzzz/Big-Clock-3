@@ -1,9 +1,11 @@
 # Решение #6 — Механизм обновления времени и мигания «:» (ticker, выравнивание, экономия)
 
+> **Примечание 2026-08-24:** Актуальная реализация — двоеточие как отдельный `colonText` overlay (см. `07-font-colon-maximize.md`), пробел между `HH` и `MM` сжат `ScaleXSpan(0.5)`, мигание через `Alpha`. Ниже — исходный вариант с одним `TextView`.
+
 ## Вопрос (из Wayfinder)
 Какой механизм обеспечивает точное обновление строки `ЧЧ:ММ` и мигание разделителя `:` с частотой 1 Гц, выровненное к системной секунде, при минимальном расходе заряда и корректной обработке смены времени, часового пояса и режима Doze?
 
-Тип — `task` (AFK), зависит от стека (#3, ADR-0001 `net10.0-android`, `minSdk 26`).
+Тип — `task` (AFK), зависит от стека (#3, ADR-0001 `net11.0-android`, `minSdk 26`).
 
 ## Выбранный примитив
 
@@ -27,7 +29,7 @@
 Две независимые периодичности, синхронизированные к одному началу секунды:
 
 - **Минутный тик (`ЧЧ:ММ`)** — ровно в `00` миллисекунд каждой следующей минуты. Обновление текста происходит только при смене минуты, а не каждую секунду, что снижает число перерисовок в 60 раз.
-- **Полу секундный тик (`:`)** — каждые 500 мс, начиная с выровненного момента. Мигание реализовано изменением прозрачности символа через `Spannable` (вариант A из #4, один `TextView`) или `Alpha` отдельного `TextView` (вариант B), без пересоздания layout.
+- **Полу секундный тик (`:`)** — каждые 500 мс, начиная с выровненного момента. Исходно — `Spannable` (вариант A из #4, один `TextView`) или `Alpha` отдельного `TextView` (B); актуально — `colonText` overlay (`Alpha 1/0`) с узким пробелом `ScaleX 0.5` в `clockText` (см. `07`), без пересоздания layout.
 
 Выравнивание первого запуска к началу следующей секунды исключает наблюдаемый дрейф: вместо `postDelayed(500)` с накоплением погрешности используется `postAtTime(nextSecond)` и далее строгий шаг 500 мс.
 
@@ -80,7 +82,7 @@ onPause():   stopTicker()
 onReceive(TIME_CHANGED | TIMEZONE_CHANGED | TIME_TICK): restartTicker()
 ```
 
-Фактический код использует `Handler.PostAtTime` / `PostDelayed`, `SystemClock.UptimeMillis()`, `Java.Lang.JavaSystem.CurrentTimeMillis()` для вычисления задержек и `SpannableString` с `ForegroundColorSpan(Transparent)` для скрытия `:` без пересчёта layout. Полный класс вынесен в `ClockTicker.cs` как отделяемый компонент, что соответствует рекомендациям `dotnet-best-practices` (единственная ответственность, отсутствие статики).
+Фактический код использует `Handler.PostAtTime` / `PostDelayed`, `SystemClock.UptimeMillis()`, `Java.Lang.JavaSystem.CurrentTimeMillis()` для вычисления задержек. Исходно — `SpannableString` с `ForegroundColorSpan(Transparent)` для `:`; актуально — `clockText` как `SpannableString` с `ScaleXSpan(0.5)` на пробеле и `colonText.Alpha` (см. `07`). Класс `ClockTicker.cs` выделен как отделяемый компонент (`dotnet-best-practices`).
 
 ## Энергоэффективность
 
@@ -103,13 +105,14 @@ onReceive(TIME_CHANGED | TIMEZONE_CHANGED | TIME_TICK): restartTicker()
 - Устройство ушло в Doze на 10 минут и вернулось — после `onResume` часы показывают актуальное время, `:` мигает синхронно секунде.
 - `adb shell dumpsys batterystats` — отсутствие `WakeLock` у `com.alexzzzz.bigclock`, число пробуждений соответствует 120 в минуту только для `:` (500 мс) без лишних кадров.
 
-## Артефакты ветки
+## Артефакты
 
 ```
-BigClock.csproj                          — net10.0-android, minSdk 26 (наследовано от skeleton/fullscreen)
-BigClockActivity.cs                      — интеграция тикера в onResume/onPause + immersive из #5
-ClockTicker.cs                           — выделенный компонент тикера (Handler + выравнивание + BroadcastReceiver)
+BigClock.csproj                          — net11.0-android, minSdk 26 (Microsoft.NET.Sdk)
+BigClockActivity.cs                      — интеграция тикера + Maximize по Paint (07) + immersive 1.0 (07)
+ClockTicker.cs                           — Handler + 0.5 пробел + colon overlay Alpha
 Properties/AndroidManifest.xml           — sensorLandscape, configChanges (из #5)
-Resources/layout/activity_big_clock.xml  — Variant A из #4
-docs/decisions/06-ticker.md              — этот документ
+Resources/layout/activity_big_clock.xml  — clockText 1.0 + colonText overlay (07)
+Resources/font/digital_7_mono.ttf        — digital-7 (mono)
+docs/decisions/06-ticker.md              — этот документ (актуализировано в 07)
 ```

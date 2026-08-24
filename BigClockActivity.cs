@@ -27,6 +27,7 @@ namespace BigClock;
 public sealed class BigClockActivity : Activity
 {
     TextView? clockText;
+    TextView? colonText;
     ClockTicker? ticker;
     Handler? mainHandler;
 
@@ -44,15 +45,16 @@ public sealed class BigClockActivity : Activity
 
         SetContentView(Resource.Layout.activity_big_clock);
         clockText = FindViewById<TextView>(Resource.Id.clockText);
+        colonText = FindViewById<TextView>(Resource.Id.colonText);
 
         HideSystemBars();
 
         var root = FindViewById<View>(Android.Resource.Id.Content)!;
         ViewCompat.SetOnApplyWindowInsetsListener(root, new InsetsListener());
 
-        // Максимальное заполнение: ручной подбор размера шрифта, чтобы текст 88:88
-        // полностью вписывался в доступную площадь без пустых полей сверху/снизу.
-        // autoSize оставляем выключенным, размер вычисляется по Paint.
+        // Максимальное заполнение: ручной подбор размера шрифта, чтобы текст 88 88
+        // с 50% пробелом полностью вписывался без пустых полей.
+        // Двоеточие — отдельный overlay, занимает половину ширины и рисуется поверх.
         if (clockText != null)
         {
             clockText.ViewTreeObserver.GlobalLayout += (_, _) => MaximizeClockTextSize();
@@ -62,7 +64,7 @@ public sealed class BigClockActivity : Activity
         mainHandler = new Handler(Looper.MainLooper!);
         if (clockText != null)
         {
-            ticker = new ClockTicker(clockText, mainHandler);
+            ticker = new ClockTicker(clockText, colonText, mainHandler);
         }
     }
 
@@ -107,22 +109,23 @@ public sealed class BigClockActivity : Activity
             availW = dm.WidthPixels;
             availH = dm.HeightPixels;
         }
-        // Небольшой запас 1% чтобы избежать клиппинга на границах
         availW = (int)(availW * 0.995f);
         availH = (int)(availH * 0.995f);
         if (availW <= 0 || availH <= 0) return;
 
         var paint = new Android.Text.TextPaint(clockText.Paint);
-        const string probe = "88:88";
         float low = 10f, high = 4000f, best = low;
         for (int i = 0; i < 22; i++)
         {
             float mid = (low + high) / 2f;
             paint.TextSize = mid;
-            float w = paint.MeasureText(probe);
+            // Ширина с 50% пробелом: HH + 0.5*space + MM, двоеточие overlay не учитывается (0 ширины)
+            float wHH = paint.MeasureText("88");
+            float wSpace = paint.MeasureText(" ");
+            float wMM = paint.MeasureText("88");
+            float w = wHH + wSpace * 0.5f + wMM;
             var fm = paint.GetFontMetrics();
             float h = fm != null ? Math.Abs(fm.Ascent) + Math.Abs(fm.Descent) : mid;
-            // Для digital-7 учитываем только ascent/descent, без extra leading
             if (w <= availW && h <= availH)
             {
                 best = mid;
@@ -131,6 +134,7 @@ public sealed class BigClockActivity : Activity
             else high = mid;
         }
         clockText.SetTextSize(Android.Util.ComplexUnitType.Px, best);
+        colonText?.SetTextSize(Android.Util.ComplexUnitType.Px, best);
     }
 
     void HideSystemBars()

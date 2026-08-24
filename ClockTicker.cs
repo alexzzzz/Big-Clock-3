@@ -15,8 +15,9 @@ namespace BigClock;
 public sealed class ClockTicker : Java.Lang.Object
 {
     readonly TextView clockText;
+    readonly TextView? colonText;
     readonly Handler handler;
-    readonly Action<string> log; // опционально для диагностики
+    readonly Action<string> log;
 
     Java.Lang.IRunnable? colonRunnable;
     Java.Lang.IRunnable? minuteRunnable;
@@ -24,12 +25,17 @@ public sealed class ClockTicker : Java.Lang.Object
     bool colonVisible = true;
     bool isRunning;
 
-    public ClockTicker(TextView clockText, Handler handler, Action<string>? log = null)
+    public ClockTicker(TextView clockText, TextView? colonText, Handler handler, Action<string>? log = null)
     {
         this.clockText = clockText;
+        this.colonText = colonText;
         this.handler = handler;
         this.log = log ?? (_ => { });
     }
+
+    // Совместимость со старым вызовом (colon overlay отсутствует)
+    public ClockTicker(TextView clockText, Handler handler, Action<string>? log = null)
+        : this(clockText, null, handler, log) { }
 
     public void Start(Context context)
     {
@@ -103,18 +109,26 @@ public sealed class ClockTicker : Java.Lang.Object
         var now = DateTime.Now;
         var hh = now.Hour.ToString("D2");
         var mm = now.Minute.ToString("D2");
-        var text = $"{hh}:{mm}";
-        // Сохраняем текущее состояние ':' — ApplyColon наложит Spannable поверх
-        clockText.Text = text;
+        // Между HH и MM — сжатый до 50% пробел, двоеточие рисуется overlay
+        var raw = $"{hh} {mm}";
+        var span = new SpannableString(raw);
+        span.SetSpan(new ScaleXSpan(0.5f), 2, 3, SpanTypes.ExclusiveExclusive);
+        clockText.SetText(span, TextView.BufferType.Spannable);
         ApplyColon();
     }
 
     void ApplyColon()
     {
+        if (colonText != null)
+        {
+            // Overlay-режим: двоеточие занимает половину обычной ширины за счёт
+            // узкого пробела (0.5) + наложения, здесь управляем только видимостью
+            colonText.Alpha = colonVisible ? 1f : 0f;
+            return;
+        }
+        // Fallback: один TextView с ':' внутри (если colon overlay отсутствует)
         var text = clockText.Text;
         if (string.IsNullOrEmpty(text) || text.Length < 5) return;
-
-        // Вариант A (один TextView): скрываем ':' через Transparent, без пересчёта layout
         var span = new SpannableString(text);
         var color = colonVisible ? Android.Graphics.Color.White : Android.Graphics.Color.Transparent;
         span.SetSpan(new ForegroundColorSpan(color), 2, 3, SpanTypes.ExclusiveExclusive);

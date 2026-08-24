@@ -96,15 +96,12 @@ public sealed class BigClockActivity : Activity
 
     sealed class InsetsListener : Java.Lang.Object, IOnApplyWindowInsetsListener
     {
-        public WindowInsetsCompat OnApplyWindowInsets(View v, WindowInsetsCompat insets)
+        public WindowInsetsCompat? OnApplyWindowInsets(View? v, WindowInsetsCompat? insets)
         {
-            var bars = insets.GetInsets(WindowInsetsCompat.Type.SystemBars());
-            var cutout = insets.GetInsets(WindowInsetsCompat.Type.DisplayCutout());
-            int left = Math.Max(bars.Left, cutout.Left);
-            int right = Math.Max(bars.Right, cutout.Right);
-            int top = Math.Max(bars.Top, cutout.Top);
-            int bottom = Math.Max(bars.Bottom, cutout.Bottom);
-            v.SetPadding(left, top, right, bottom);
+            // Максимальное заполнение: игнорируем отступы для вырезов и баров,
+            // чтобы цифры занимали всю площадь экрана без пустых полей.
+            // Immersive уже скрывает status/nav, ShortEdges разрешает отрисовку в вырезе.
+            v?.SetPadding(0, 0, 0, 0);
             return WindowInsetsCompat.Consumed;
         }
     }

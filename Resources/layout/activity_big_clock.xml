@@ -15,16 +15,16 @@
         android:fontFamily="@font/digital_7_mono"
         android:includeFontPadding="false"
         android:gravity="center"
-        android:letterSpacing="0"
+        android:letterSpacing="-0.02"
         android:textSize="300sp"
         app:autoSizeTextType="uniform"
-        app:autoSizeMinTextSize="20sp"
-        app:autoSizeMaxTextSize="600sp"
+        app:autoSizeMinTextSize="10sp"
+        app:autoSizeMaxTextSize="1000sp"
         app:autoSizeStepGranularity="1sp"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintWidth_percent="0.98"
-        app:layout_constraintHeight_percent="0.96" />
+        app:layout_constraintWidth_percent="1.0"
+        app:layout_constraintHeight_percent="1.0" />
 </androidx.constraintlayout.widget.ConstraintLayout>

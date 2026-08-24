@@ -50,6 +50,15 @@ public sealed class BigClockActivity : Activity
         var root = FindViewById<View>(Android.Resource.Id.Content)!;
         ViewCompat.SetOnApplyWindowInsetsListener(root, new InsetsListener());
 
+        // Максимальное заполнение: ручной подбор размера шрифта, чтобы текст 88:88
+        // полностью вписывался в доступную площадь без пустых полей сверху/снизу.
+        // autoSize оставляем выключенным, размер вычисляется по Paint.
+        if (clockText != null)
+        {
+            clockText.ViewTreeObserver.GlobalLayout += (_, _) => MaximizeClockTextSize();
+            clockText.Post(MaximizeClockTextSize);
+        }
+
         mainHandler = new Handler(Looper.MainLooper!);
         if (clockText != null)
         {
@@ -84,6 +93,44 @@ public sealed class BigClockActivity : Activity
             ticker.Release(this);
         }
         base.OnDestroy();
+    }
+
+    void MaximizeClockTextSize()
+    {
+        if (clockText == null) return;
+        int availW = clockText.Width;
+        int availH = clockText.Height;
+        if (availW <= 0 || availH <= 0)
+        {
+            var dm = Resources?.DisplayMetrics;
+            if (dm == null) return;
+            availW = dm.WidthPixels;
+            availH = dm.HeightPixels;
+        }
+        // Небольшой запас 1% чтобы избежать клиппинга на границах
+        availW = (int)(availW * 0.995f);
+        availH = (int)(availH * 0.995f);
+        if (availW <= 0 || availH <= 0) return;
+
+        var paint = new Android.Text.TextPaint(clockText.Paint);
+        const string probe = "88:88";
+        float low = 10f, high = 4000f, best = low;
+        for (int i = 0; i < 22; i++)
+        {
+            float mid = (low + high) / 2f;
+            paint.TextSize = mid;
+            float w = paint.MeasureText(probe);
+            var fm = paint.GetFontMetrics();
+            float h = fm != null ? Math.Abs(fm.Ascent) + Math.Abs(fm.Descent) : mid;
+            // Для digital-7 учитываем только ascent/descent, без extra leading
+            if (w <= availW && h <= availH)
+            {
+                best = mid;
+                low = mid;
+            }
+            else high = mid;
+        }
+        clockText.SetTextSize(Android.Util.ComplexUnitType.Px, best);
     }
 
     void HideSystemBars()
